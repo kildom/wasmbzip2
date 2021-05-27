@@ -1,0 +1,4 @@
+[submodule "bzip2"]
+	path = bzip2
+	url = git://sourceware.org/git/bzip2.git
+	branch = master

@@ -1,0 +1,14 @@
+{
+  "name": "wasmbzip2",
+  "version": "0.0.1",
+  "description": "libbzip2 compiled for web assembly",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tar": "^6.1.0"
+  }
+}

@@ -5,7 +5,7 @@
 #endif
 
 #include "bzlib.h"
-
+#include "struct_defs.h"
 
 // Utility macros
 

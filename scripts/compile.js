@@ -3,10 +3,10 @@ let CC = '../wasi-sdk/bin/clang';
 let sysroot = '../wasi-sdk/share/wasi-sysroot';
 let cwd = '../build';
 let targets = {
-    //nostdio: 'libbzip2',
+    nostdio: 'libbzip2',
     //nostdio_d: 'libbzip2-d',
     //cmp: 'libbzip2-cmp',
-    dec: 'libbzip2-dec',
+    //dec: 'libbzip2-dec',
     //stdio: 'libbzip2-stdio',
     //stdio_d: 'libbzip2-stdio-d',
 }
@@ -40,6 +40,7 @@ let flagsv = {
 }
 let includes = [
     '../bzip2',
+    '../src',
 ];
 let template = '../src/libbzip2.tmpl.js';
 
@@ -69,6 +70,10 @@ function compile(variant) {
             stdio: 'inherit',
         });
 
+    let js = fs.readFileSync(template, 'utf-8');
+    js = js.replace(/^\s*\/\/#/gm, '#');
+    fs.writeFileSync(`${targets[variant]}.tmp`, js);
+
     execFileSync(CC,
         [
             '-E', '-x', 'c', '-Wno-unused-command-line-argument',
@@ -77,16 +82,18 @@ function compile(variant) {
             ...includes,
             '-o',
             `${targets[variant]}.js`,
-            template,
+            `${targets[variant]}.tmp`,
         ],
         {
             cwd: cwd,
             stdio: 'inherit',
         });
 
-    let js = fs.readFileSync(`${targets[variant]}.js`, 'utf-8');
+    fs.unlinkSync(`${targets[variant]}.tmp`);
+
+    js = fs.readFileSync(`${targets[variant]}.js`, 'utf-8');
     js = js.replace(/^\s*#.*?\r?\n/gm, '');
-    js = js.replace(/__BEGIN_SOURCE_REMOVAL__[\S\s]*__END_SOURCE_REMOVAL__/g, '');
+    js = js.replace(/__BEGIN_INCLUDES__[\S\s]*__END_INCLUDES__/g, '');
     let wasm = fs.readFileSync(`${targets[variant]}.wasm`);
     js = js.replace('__WASM_BASE64_GOES_HERE__', JSON.stringify(wasm.toString('base64')));
     js = js.replace('__WASM_ARRAY_GOES_HERE__', JSON.stringify(Array.from(wasm)));

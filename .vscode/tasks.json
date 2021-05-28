@@ -4,7 +4,12 @@
 		{
 			"label": "compile",
 			"type": "shell",
-			"command": "${env:HOME}/Programs/node/bin/node ${workspaceFolder}/scripts/compile.js",
+			"windows": {
+				"command": "C:\\node\\node ${workspaceFolder}/scripts/compile.js"
+			},
+			"linux": {
+				"command": "${env:HOME}/Programs/node/bin/node ${workspaceFolder}/scripts/compile.js"
+			},
 			"problemMatcher": {
 				"owner": "cpp",
 				"source": "gcc",

@@ -35,7 +35,7 @@ Following sample shows how to use low-level API.
     // Prepare input data
 let input = (new TextEncoder()).encode('Hello World!');
     // Create library instance
-let bz2 = new BZ2();
+let bz2 = await BZ2.create();
     // Allocate memory
 let inptr = bz2.malloc(1024);
 let outptr = bz2.malloc(1024);

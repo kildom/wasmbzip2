@@ -4,7 +4,25 @@ __BEGIN_INCLUDES__
 //#include "struct_defs.h"
 __END_INCLUDES__
 
-if (typeof(atob) == 'undefined') {
+//#ifndef BZ_NO_STDIO
+/* libbzip2 provides two kinds of API for `.bz2` file manipulation.
+ * They are not very convenient in a browsers. This variant of
+ * wasmbzip2 allows access to them. It also contains everything from
+ * other variants. The `verbosity` parameter is not ignores in this
+ * variant.
+ * 
+ * The API does not have another layer above it, so call it as usual
+ * low-level API functions. Additionally, this variant provides fopen()
+ * and fclose() functions from the stdlib.
+ * 
+ * This variants require file system layer implementation from you as
+ * the second parameter of BZ2.create() function.
+ * See wasi-libc project for details:
+ * https://github.com/WebAssembly/wasi-libc
+ */
+//#endif
+
+if (typeof (atob) == 'undefined') {
     var atob = base64 => Buffer.from(base64, 'base64').toString('binary');
 }
 
@@ -13,8 +31,7 @@ const code = new Uint8Array(__WASM_ARRAY_GOES_HERE__);
 
 let wasmModule = null;
 
-async function getModule()
-{
+async function getModule() {
     if (wasmModule == null) {
         wasmModule = WebAssembly.compile(code);
     }
@@ -24,18 +41,20 @@ async function getModule()
 class bz_stream {
 
     constructor(bz) {
+        this.bz = bz;
+        this.memory = bz.memory;
         this.ptr = bz.bzAlloc(BZ_STREAM_SIZEOF)
         if (!this.ptr)
             throw Error('Out of memory');
-        this.bz = bz;
-        this.memory = bz.memory;
-        this.view = new DataView(bz.memory.buffer, this.ptr, BZ_STREAM_SIZEOF);
+        this._view = new DataView(bz.memory.buffer, this.ptr, BZ_STREAM_SIZEOF);
         this.clear();
     }
 
-    refresh() {
-        if (this.view.buffer !== this.memory.buffer)
-            this.view = new DataView(this.memory.buffer, this.ptr, BZ_STREAM_SIZEOF);
+    get view() {
+        if (this._view.buffer !== this.memory.buffer) {
+            this._view = new DataView(this.memory.buffer, this.ptr, BZ_STREAM_SIZEOF);
+        }
+        return this._view;
     }
 
     clear() {
@@ -56,13 +75,6 @@ class bz_stream {
     get avail_out() { return this.view.getUint32(BZ_STREAM_AVAIL_OUT, true); }
     set avail_out(v) { this.view.setUint32(BZ_STREAM_AVAIL_OUT, v, true); }
     get total_out() { return this.view.getUint32(BZ_STREAM_TOTAL_OUT_LO32, true) + 0x100000000 * this.view.getUint32(BZ_STREAM_TOTAL_OUT_HI32, true); }
-    get state() { return this.view.getUint32(BZ_STREAM_STATE, true); }
-    get bzalloc() { return this.view.getUint32(BZ_STREAM_BZALLOC, true); }
-    set bzalloc(v) { this.view.setUint32(BZ_STREAM_BZALLOC, v, true); }
-    get bzfree() { return this.view.getUint32(BZ_STREAM_BZFREE, true); }
-    set bzfree(v) { this.view.setUint32(BZ_STREAM_BZFREE, v, true); }
-    get opaque() { return this.view.getUint32(BZ_STREAM_OPAQUE, true); }
-    set opaque(v) { this.view.setUint32(BZ_STREAM_OPAQUE, v, true); }
 }
 
 
@@ -76,13 +88,9 @@ class BZ2 {
         }
     }
 
-    createStream() {
-        return new bz_stream(this);
-    }
-
 }
 
-BZ2.create = async function(memoryMax) {
+BZ2.create = async function (memoryMax, wasi) {
     let memopt = { initial: 4 };
     if (memoryMax) {
         memopt.maximum = Math.max(8, Math.ceil(memoryMax / 65536));
@@ -91,12 +99,15 @@ BZ2.create = async function(memoryMax) {
     let instance = await WebAssembly.instantiate(await getModule(), {
         env: {
             memory: memory,
-//#ifdef BZ_NO_STDIO
+            //#ifdef BZ_NO_STDIO
             bzInternalError: errorCode => {
                 throw new Error(`BZip2 library internal error ${errorCode}`);
             },
-//#endif
-        }
+            //#endif
+        },
+        //#ifndef BZ_NO_STDIO
+        wasi_snapshot_preview1: wasi,
+        //#endif
     });
     return new BZ2(instance, memory);
 }

@@ -35,14 +35,19 @@ _Noreturn void bz_internal_error(int errcode)
 
 // Exposing default allocation
 
-WASM_EXPORT(bzAlloc)
-void *bzAlloc(int size) {
+WASM_EXPORT(malloc)
+void *stdlibMalloc(int size) {
     return malloc(size);
 }
 
-WASM_EXPORT(bzFree)
-void bzFree(void *ptr) {
+WASM_EXPORT(free)
+void stdlibFree(void *ptr) {
     free(ptr);
+}
+
+WASM_EXPORT(realloc)
+void *stdlibRealloc(void *ptr, int size) {
+    return realloc(ptr, size);
 }
 
 
@@ -158,14 +163,14 @@ const char * bzlibVersion(
 
 // fopen/fclose wrappers for bz2 file reading/writing
 
-WASM_EXPORT(bzFileOpen)
-FILE* bzFileOpen(const char *filename, const char *modes)
+WASM_EXPORT(fopen)
+FILE* stdlibFopen(const char *filename, const char *modes)
 {
     return fopen(filename, modes);
 }
 
-WASM_EXPORT(bzFileClose)
-int bzFileClose(FILE* file)
+WASM_EXPORT(fclose)
+int stdlibFclose(FILE* file)
 {
     return fclose(file);
 }

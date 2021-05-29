@@ -3,12 +3,12 @@ let CC = '../wasi-sdk/bin/clang';
 let sysroot = '../wasi-sdk/share/wasi-sysroot';
 let cwd = '../build';
 let targets = {
-    nostdio: 'libbzip2',
-    //nostdio_d: 'libbzip2-d',
+    //nostdio: 'libbzip2',
+    //nostdio_d: 'libbzip2-dbg',
     //cmp: 'libbzip2-cmp',
     //dec: 'libbzip2-dec',
     //stdio: 'libbzip2-stdio',
-    //stdio_d: 'libbzip2-stdio-d',
+    stdio_d: 'libbzip2-stdio-dbg',
 }
 let src = [
     '../bzip2/huffman.c',
@@ -70,18 +70,21 @@ function compile(variant) {
             stdio: 'inherit',
         });
 
-    let js = fs.readFileSync(template, 'utf-8');
-    js = js.replace(/^\s*\/\/#/gm, '#');
+    let js = fs.readFileSync(template, 'utf-8')
+        .replace(/^\s*\/\/#/gm, '#')
+        .replace(/\/\*([\S\s]*?)\*\//g, (_, m) => `--save-comment--${Buffer.from(m).toString('hex')}--end-of-comment--`);
     fs.writeFileSync(`${targets[variant]}.tmp`, js);
 
     execFileSync(CC,
         [
-            '-E', '-x', 'c', '-Wno-unused-command-line-argument',
+            `--sysroot=${sysroot}`,
+            '-E', '-Wno-unused-command-line-argument',
             ...flags,
             ...flagsv[variant],
             ...includes,
             '-o',
             `${targets[variant]}.js`,
+            '-x', 'c',
             `${targets[variant]}.tmp`,
         ],
         {
@@ -91,13 +94,14 @@ function compile(variant) {
 
     fs.unlinkSync(`${targets[variant]}.tmp`);
 
-    js = fs.readFileSync(`${targets[variant]}.js`, 'utf-8');
-    js = js.replace(/^\s*#.*?\r?\n/gm, '');
-    js = js.replace(/__BEGIN_INCLUDES__[\S\s]*__END_INCLUDES__/g, '');
     let wasm = fs.readFileSync(`${targets[variant]}.wasm`);
-    js = js.replace('__WASM_BASE64_GOES_HERE__', JSON.stringify(wasm.toString('base64')));
-    js = js.replace('__WASM_ARRAY_GOES_HERE__', JSON.stringify(Array.from(wasm)));
-    js = js.replace('__WASM_BINSTR_GOES_HERE__', JSON.stringify(wasm.toString('binary')).replace(/\\u00/g, '\\x'));
+    js = fs.readFileSync(`${targets[variant]}.js`, 'utf-8')
+        .replace(/^\s*#.*?\r?\n/gm, '')
+        .replace(/--save-comment--([\S\s]*?)--end-of-comment--/g, (_, m) => `/*${Buffer.from(m, 'hex').toString('utf-8')}*/`)
+        .replace(/__BEGIN_INCLUDES__[\S\s]*__END_INCLUDES__/g, '')
+        .replace('__WASM_BASE64_GOES_HERE__', JSON.stringify(wasm.toString('base64')))
+        .replace('__WASM_ARRAY_GOES_HERE__', JSON.stringify(Array.from(wasm)))
+        .replace('__WASM_BINSTR_GOES_HERE__', JSON.stringify(wasm.toString('binary')).replace(/\\u00/g, '\\x'));
     fs.writeFileSync(`${targets[variant]}.js`, js);
 }
 

@@ -9,7 +9,7 @@ async function runit() {
 
 		let bz2 = await BZ2.create();
 		console.log('---', bz2.memory.buffer.byteLength);
-		let strm = bz2.createStream();
+		let strm = new BZ2.stream(bz2);
 
 		console.log(Object.keys(bz2));
 
@@ -18,9 +18,9 @@ async function runit() {
 		console.log('---', bz2.memory.buffer.byteLength);
 
 		let inputData = encoder.encode('Some sample test to compress. Some sample test to compress. Some sample test to compress. ');
-		let inptr = bz2.bzAlloc(inputData.length);
+		let inptr = bz2.malloc(inputData.length);
 		let inbuf = new Uint8Array(bz2.memory.buffer, inptr, inputData.length);
-		let outptr = bz2.bzAlloc(1024);
+		let outptr = bz2.malloc(1024);
 		inbuf.set(inputData);
 		strm.next_in = inptr;
 		strm.avail_in = inputData.length;
@@ -41,17 +41,17 @@ async function runit() {
 		ret = bz2.bzCompressEnd(strm.ptr);
 		console.log('bzCompressEnd', ret);
 
-		bz2.bzFree(inptr);
-		bz2.bzFree(outptr);
+		bz2.free(inptr);
+		bz2.free(outptr);
 
 		strm.clear();
 
 		ret = bz2.bzDecompressInit(strm.ptr, 0, 0);
 		console.log('bzDecompressInit', ret);
 
-		inptr = bz2.bzAlloc(compressed.length);
+		inptr = bz2.malloc(compressed.length);
 		inbuf = new Uint8Array(bz2.memory.buffer, inptr, compressed.length);
-		outptr = bz2.bzAlloc(1024);
+		outptr = bz2.malloc(1024);
 		inbuf.set(compressed);
 		strm.next_in = inptr;
 		strm.avail_in = inbuf.length;
@@ -72,8 +72,8 @@ async function runit() {
 		ret = bz2.bzDecompressEnd(strm.ptr);
 		console.log('bzDecompressEnd', ret);
 
-		bz2.bzFree(inptr);
-		bz2.bzFree(outptr);
+		bz2.free(inptr);
+		bz2.free(outptr);
 		strm.free();
 
 		let final = (new TextDecoder()).decode(decompressed);
@@ -93,7 +93,7 @@ async function runit() {
 			console.log(str.next_in);
 			sum = 0;
 			for (let i = 0; i < 10000; i++) {
-				let ptr = bz2.bzAlloc(32 * 1024);
+				let ptr = bz2.malloc(32 * 1024);
 				if (!ptr) break;
 				console.log(i, '       ', ptr, '    ', sum);
 				sum += 32 * 1024;

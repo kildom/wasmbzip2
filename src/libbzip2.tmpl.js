@@ -43,7 +43,7 @@ class bz_stream {
     constructor(bz) {
         this.bz = bz;
         this.memory = bz.memory;
-        this.ptr = bz.bzAlloc(BZ_STREAM_SIZEOF)
+        this.ptr = bz.malloc(BZ_STREAM_SIZEOF)
         if (!this.ptr)
             throw Error('Out of memory');
         this._view = new DataView(bz.memory.buffer, this.ptr, BZ_STREAM_SIZEOF);
@@ -62,7 +62,7 @@ class bz_stream {
     }
 
     free() {
-        this.bz.bzFree(this.ptr);
+        this.bz.free(this.ptr);
     }
 
     get next_in() { return this.view.getUint32(BZ_STREAM_NEXT_IN, true); }

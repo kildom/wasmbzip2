@@ -3,12 +3,12 @@ let CC = '../wasi-sdk/bin/clang';
 let sysroot = '../wasi-sdk/share/wasi-sysroot';
 let cwd = '../build';
 let targets = {
-    //nostdio: 'libbzip2',
+    nostdio: 'libbzip2',
     //nostdio_d: 'libbzip2-dbg',
     //cmp: 'libbzip2-cmp',
     //dec: 'libbzip2-dec',
     //stdio: 'libbzip2-stdio',
-    stdio_d: 'libbzip2-stdio-dbg',
+    //stdio_d: 'libbzip2-stdio-dbg',
 }
 let src = [
     '../bzip2/huffman.c',

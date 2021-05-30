@@ -14,14 +14,14 @@ It provides convenient way of compressing and decompressing bzip2 streams.
 
 ### Static methods
 
-#### `async BZ2.create(memoryMax, wasi)`**  
-   Creates new instance of `BZ2` class that contains instance of `libbzip2` WebAssembly module.
- * **`memoryMax`** *optional*  
-   Maximum memory that WebAssembly module can allocate, unlimited by default.
- * **`wasi`** *optional*  
-   A WASI system calls. It is used only in `libbzip2-stdio` variant.
- * **Return value**  
-   A `Promise` that resolves to a `BZ2` object.
+**`async BZ2.create(memoryMax, wasi)`**
+Creates new instance of `BZ2` class that contains instance of `libbzip2` WebAssembly module.
+* **`memoryMax`** *optional*  
+    Maximum memory that WebAssembly module can allocate, unlimited by default.
+* **`wasi`** *optional*  
+    A WASI system calls. It is used only in `libbzip2-stdio` variant.
+* **Return value**  
+    A `Promise` that resolves to a `BZ2` object.
 
 ### Instance properties
 

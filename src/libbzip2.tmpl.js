@@ -45,7 +45,7 @@ class bz_stream {
         this.memory = bz.memory;
         this.ptr = bz.malloc(BZ_STREAM_SIZEOF)
         if (!this.ptr)
-            throw Error('Out of memory');
+            throw Error('wasmbzip2: Out of memory');
         this._view = new DataView(bz.memory.buffer, this.ptr, BZ_STREAM_SIZEOF);
         this.clear();
     }
@@ -77,6 +77,50 @@ class bz_stream {
     get total_out() { return this.view.getUint32(BZ_STREAM_TOTAL_OUT_LO32, true) + 0x100000000 * this.view.getUint32(BZ_STREAM_TOTAL_OUT_HI32, true); }
 }
 
+function checkErrorCode(code, allowPositive) {
+    if (code == BZ2.SEQUENCE_ERROR) throw Error('wasmbzip2: Sequence error');
+    if (code == BZ2.PARAM_ERROR) throw Error('wasmbzip2: Invalid parameter');
+    if (code == BZ2.MEM_ERROR) throw Error('wasmbzip2: Out of memory');
+    if (code == BZ2.DATA_ERROR) throw Error('wasmbzip2: Data integrity error');
+    if (code == BZ2.DATA_ERROR_MAGIC) throw Error('wasmbzip2: Invalid magic bytes');
+    if (code == BZ2.IO_ERROR) throw Error('wasmbzip2: IO error');
+    if (code == BZ2.UNEXPECTED_EOF) throw Error('wasmbzip2: Unexpected end of stream');
+    if (code == BZ2.OUTBUFF_FULL) throw Error('wasmbzip2: Output buffer full');
+    if (code == BZ2.CONFIG_ERROR) throw Error('wasmbzip2: Invalid configuration');
+    if (code < 0) throw Error('wasmbzip2: Unknown error');
+    if (code != BZ2.OK && !allowPositive) throw Error('wasmbzip2: Unexpected return value');
+}
+
+class Operation {
+
+    getInput() {
+        // Return available part of input fifo buffer
+    }
+
+    getOutput() {
+        // Return produced part of the output fifo buffer, remove it from fifo
+    }
+
+    compress(input, inputOffset, inputLength, output, outputOffset, outputLength) {
+        // offsets and lengths and output are optional
+
+        // if input is internal and inputOffset == 0 just update fifo state, report that all was consumed
+        // else copy as much as possible data to fifo, report how many data was consumed
+        
+        // bzCompress: BZ_FINISH if input is empty and fifo is not full
+
+        // if output was provided, copy as much as possible to the output, update fifo state, report produced length
+        // report how many bytes are pending in the fifo
+
+        // Go to beginning if more data can be consumed or produced
+        return {}; // { consumed: bytes consumed, read: bytes received to output (0 if no output), pending: bytes waiting in output fifo }
+    }
+
+    dispose() {
+        
+    }
+
+}
 
 class BZ2 {
 
@@ -86,6 +130,61 @@ class BZ2 {
         for (let name in instance.exports) {
             this[name] = instance.exports[name];
         }
+        this.tempBufferPtr = this.malloc(4);
+    }
+
+    get version() {
+        let cstr = this.bzlibVersion();
+        let buf = new Uint8Array(this.memory.buffer, cstr);
+        let end = buf.indexOf(0);
+        return (new TextDecoder()).decode(new Uint8Array(buf.buffer, cstr, end));
+    }
+
+    _oneStepOperation(input, output, level) {
+        let outptr = 0;
+        let inptr = 0;
+        try {
+            let outlen = (typeof (output) == 'number') ? output : output.length;
+            outptr = this.malloc(outlen);
+            if (!outptr)
+                throw Error('wasmbzip2: Out of memory');
+            (new DataView(this.memory.buffer, this.tempBufferPtr, 4)).setUint32(0, outlen, true);
+            inptr = this.malloc(input.length);
+            if (!inptr)
+                throw Error('wasmbzip2: Out of memory');
+            (new Uint8Array(this.memory.buffer, inptr, input.length)).set(input);
+            let ret;
+            if (level <= 0) {
+                ret = this.bzBuffToBuffDecompress(outptr, this.tempBufferPtr, inptr, input.length, -level, 0);
+            } else {
+                ret = this.bzBuffToBuffCompress(outptr, this.tempBufferPtr, inptr, input.length, level, 0, 0);
+            }
+            checkErrorCode(ret);
+            outlen = (new DataView(this.memory.buffer, this.tempBufferPtr, 4)).getUint32(0, true);
+            if (typeof (output) == 'number') {
+                return new Uint8Array(this.memory.buffer.slice(outptr, outptr + outlen));
+            } else {
+                output.set(new Uint8Array(this.memory.buffer, outptr, outlen));
+                return outlen;
+            }
+        } finally {
+            if (outptr)
+                this.free(outptr);
+            if (inptr)
+                this.free(inptr);
+        }
+    }
+
+    compress(input, output, level) {
+        output = output || Math.ceil(input.length * 1.01) + 600;
+        level = level || 9;
+        if (level > 9 || level < 1)
+            throw Error('wasmbzip2: Invalid compression level');
+        return this._oneStepOperation(input, output, level);
+    }
+
+    decompress(input, output, lowMem) {
+        return this._oneStepOperation(input, output, lowMem ? -1 : 0);
     }
 
 }

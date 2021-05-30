@@ -1,5 +1,5 @@
 
-const { BZ2 } = require('./build/libbzip2');
+const { BZ2 } = require('./build/libbzip2-dbg');
 
 async function runit() {
 
@@ -8,6 +8,9 @@ async function runit() {
 		const encoder = new TextEncoder();
 
 		let bz2 = await BZ2.create();
+
+		console.log(bz2.version);
+
 		console.log('---', bz2.memory.buffer.byteLength);
 		let strm = new BZ2.stream(bz2);
 
@@ -18,6 +21,11 @@ async function runit() {
 		console.log('---', bz2.memory.buffer.byteLength);
 
 		let inputData = encoder.encode('Some sample test to compress. Some sample test to compress. Some sample test to compress. ');
+
+		let bufCompressed = bz2.compress(inputData, 1024, 9);
+		console.log('bz2.compress');
+		console.log(bufCompressed);
+
 		let inptr = bz2.malloc(inputData.length);
 		let inbuf = new Uint8Array(bz2.memory.buffer, inptr, inputData.length);
 		let outptr = bz2.malloc(1024);
@@ -49,10 +57,12 @@ async function runit() {
 		ret = bz2.bzDecompressInit(strm.ptr, 0, 0);
 		console.log('bzDecompressInit', ret);
 
-		inptr = bz2.malloc(compressed.length);
-		inbuf = new Uint8Array(bz2.memory.buffer, inptr, compressed.length);
+		let forDecompress = bufCompressed;
+
+		inptr = bz2.malloc(forDecompress.length);
+		inbuf = new Uint8Array(bz2.memory.buffer, inptr, forDecompress.length);
 		outptr = bz2.malloc(1024);
-		inbuf.set(compressed);
+		inbuf.set(forDecompress);
 		strm.next_in = inptr;
 		strm.avail_in = inbuf.length;
 		strm.next_out = outptr;

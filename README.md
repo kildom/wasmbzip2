@@ -14,8 +14,11 @@ It provides convenient way of compressing and decompressing bzip2 streams.
 
 ### Static methods
 
-**`async BZ2.create(memoryMax, wasi)`**  
+
+**`async create(memoryMax, wasi)`**
+
 Creates new instance of `BZ2` class that contains instance of `libbzip2` WebAssembly module.
+
 * **`memoryMax`** *optional*  
     Maximum memory that WebAssembly module can allocate, unlimited by default.
 * **`wasi`** *optional*  
@@ -23,77 +26,166 @@ Creates new instance of `BZ2` class that contains instance of `libbzip2` WebAsse
 * **Return value**  
     A `Promise` that resolves to a `BZ2` object.
 
+
 ### Instance properties
 
- * `version` - **libbzip2** version string
+
+**`version`**  
+A libbzip2 version string.
+
 
 ### Instance methods
+
  
- * `compress(input, maxOutputSize, level)` - Compress data in one step.
-    * `input` - array-like input data
-    * `maxOutputSize` - *optional*, maximum size of the output, by default it
-                        is calculated based on input for worst case compression ratio. 
-    * `level` - *optional*, compression level from 1 to 9, default is 9
-    * returns `Uint8Array` with compressed data
-    * throws `Error` if output is bigger than `maxOutputSize`
- * `compress(input, output, level)` - Compress data in one step.
-    * `input` - array-like input data
-    * `output` - `Uint8Array` where compressed data will be written, worst case output
-                 size is input size plus 1% plus 600 bytes.
-    * `level` - *optional*, compression level from 1 to 9, default is 9
-    * returns number of bytes written to the `output` array
-    * throws `Error` if output does not fit into `output` array
- * `decompress(input, maxOutputSize, lowMem)` - Decompress data in one step.
-    * `input` - array-like input data
-    * `maxOutputSize` - maximum size of the output
-    * `lowMem` - *optional*, if present and `true`, different slower and lower memory
-                 algorithm will be used
-    * returns `Uint8Array` with decompressed data
-    * throws `Error` if output is bigger than `maxOutputSize`
- * `decompress(input, output, lowMem)` - Decompress data in one step.
-    * `input` - array-like input data
-    * `output` - `Uint8Array` where decompressed data will be written
-    * `lowMem` - *optional*, if present and `true`, different slower and lower memory
-                 algorithm will be used
-    * returns number of bytes written to the `output` array
-    * throws `Error` if output does not fit into `output` array
+**`compress(input, maxOutputSize, level)`**
+
+Compress single array at once and returns the result.
+
+* **`input`**  
+  An array-like input data.
+* **`maxOutputSize`** *optional*  
+  A maximum size of the output. By default, it
+  is calculated based on input for worst case compression ratio. 
+* **`level`** *optional*  
+  A compression level from 1 to 9. Default is 9.
+* **Return value**  
+  A `Uint8Array` containing compressed data.
+* **Throws**  
+ `BZ2.BufferError` if output is bigger than `maxOutputSize`.  
+ `BZ2.Error` if libbzip2 error occurred.
+
+
+**`compress(input, output, level)`**
+
+Compress single array at once and writes to an output array.
+
+* **`input`**  
+  An array-like input data.
+* **`output`**  
+  A `Uint8Array` where compressed data will be written. Worst case output size is the input size + 1% + 600 bytes.
+* **`level`** *optional*  
+  A compression level from 1 to 9. Default is 9.
+* **Return value**  
+  Number of bytes written to the output array.
+* **Throws**  
+ `BZ2.BufferError` if output does not fit into the output array.  
+ `BZ2.Error` if libbzip2 error occurred.
+  
+
+**`decompress(input, maxOutputSize, lowMem)`**
+
+Decompress single array at once and returns the result.
+
+* **`input`**  
+  An array-like input data.
+* **`maxOutputSize`**  
+  A maximum size of the output. Internal buffer of that size is allocated, so this value cannot be extremely high.
+* **`lowMem`** *optional*  
+  If it is present and it is `true`, a slower algorithm  will be used that consumes less memory.
+* **Return value**  
+  A `Uint8Array` containing decompressed data.
+* **Throws**  
+ `BZ2.BufferError` if output is bigger than `maxOutputSize`.  
+ `BZ2.Error` if libbzip2 error occurred.
+
+
+**`decompress(input, output, lowMem)`**
+
+Decompress single array at once and writes to an output array.
+
+* **`input`**  
+  An array-like input data.
+* **`output`**  
+  A `Uint8Array` where compressed data will be written.
+* **`lowMem`** *optional*  
+  If it is present and it is `true`, a slower algorithm  will be used that consumes less memory.
+* **Return value**  
+  Number of bytes written to the output array.
+* **Throws**  
+ `BZ2.BufferError` if output does not fit into the output array.  
+ `BZ2.Error` if libbzip2 error occurred.
 
 ## BZ2.Compression class
 
 ### Constructor
 
- * `new BZ2.Compression(bz2, inputBufferSize, outputBufferSize, level)`
-    * `bz2` - library instance
-    * `inputBufferSize` - *optional*, size of the internal input buffer, default 64K
-    * `outputBufferSize` - *optional*, size of the internal output buffer, default 64K
-    * `level` - *optional*, compression level from 1 to 9, default is 9
+**`new BZ2.Compression(bz2, inputBufferSize, outputBufferSize, level)`**
+
+* `bz2`  
+  A `BZ2` object that will handle the compression.
+* `inputBufferSize` *optional*  
+  A size of the internal input buffer, default is 128K.
+* `outputBufferSize` *optional*  
+  A size of the internal output buffer, default is 128K.
+* `level` *optional*  
+  A compression level from 1 to 9, default is 9.
 
 ### Instance properties
 
- * `totalInput` - total number of consumed bytes
- * `totalOutput` - total number of produced bytes
- * `pendingInput` - number of bytes pending in the internal input buffer
- * `pendingOutput` - number of bytes pending in the internal output buffer
- * `finished` - `true` if all output data was read
+**`totalInput`**  
+A total number of consumed bytes.
+
+**`totalOutput`**  
+A total number of produced bytes.
+
+**`pendingInput`**  
+A number of bytes pending in the internal input buffer.
+
+**`pendingOutput`**  
+A number of bytes pending in the internal output buffer.
+
+**`finished`**  
+A boolean indicating that entire output stream was read.
+
 
 ### Instance methods
 
- * `dispose()` - Release wasm memory occupied by this object
-   > **WARNING!** Call it when needed to avoid memory leaks in the `BZ2` instance object.
- * `compress(input, inputOffset, inputLength, output, outputOffset, outputLength)` - compress part of data
-    * `input` - `Uint8Array` with input bytes. `null` should be provided at the to indicate end of data.
-    * `inputOffset` - *optional*, start offset in `input` array, zero by default
-    * `inputLength` - *optional*, length of input data
-    * `output` - *optional*, `Uint8Array` where the output will be written. By default output will remain in the internal output buffer and can be read with the `readOutput()` method.
-    * `inputOffset` - *optional*, *forbidden if `output` is missing*, start offset in `output` array, zero by default
-    * `inputLength` - *optional*, *forbidden if `output` is missing*, maximum length of output
-    * returns object:
-        * `bytesRead` - number of bytes read from the `input`
-        * `bytesWritten` - number of bytes written to the `output`
-        * `finished` - `true` if all output data have been read
- * `getInput()` - gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` method avoids unnecessary copying of the memory. If input buffer is full, zero-length array is returned. Returned array is valid until next operation on library instance.
- * `readOutput()` - reads `Uint8Array` from internal output buffer. Returned array is located directly on the buffer, so no unnecessary memory copying is done by this method. If buffer is empty, `null` is returned. Returned array is valid until next operation on library instance.
- * `reset()` - reset state of the object allowing compression of another stream.
+**`compress(input, inputOffset, inputLength, output, outputOffset, outputLength)`**
+
+Compress part of data.
+
+* `input`  
+  A `Uint8Array` with the input bytes. A `null` should be passed at the end to indicate end of data.
+* `inputOffset` *optional*  
+  A start offset in `input` array, zero by default.
+* `inputLength` *optional*  
+  A length of a portion of the `input` array. Default is until the end of array.
+* `output` *optional*  
+  A `Uint8Array` where the output will be written. By default, output will remain in the internal output buffer and can be read later with the `readOutput()` method.
+* `outputOffset` *optional, forbidden if `output` is missing*  
+  A start offset in `output` array, zero by default.
+* `outputLength` *optional, forbidden if `output` is missing*  
+  A length of a portion of the `output` array. Default is until the end of array.
+* **Return value**  
+  An object with following properties:
+    * `bytesRead`  
+      A number of bytes read from the `input`.
+    * `bytesWritten`  
+      A number of bytes written to the `output`.
+    * `finished`  
+      A boolean indicating that entire output stream was read.
+
+
+**`getInput()`**
+
+Gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` method avoids unnecessary copying of the memory. If input buffer is full, zero-length array is returned. Returned array is valid until next operation on library instance.
+
+
+**`readOutput()`**
+
+Reads `Uint8Array` from internal output buffer. Returned array is located directly on the buffer, so no unnecessary memory copying is done by this method. If buffer is empty, `null` is returned. Returned array is valid until next operation on library instance.
+
+**`reset()`**
+
+Reset state of the object allowing compression of another stream.
+
+
+**`dispose()`**
+
+Release WebAssembly memory occupied by this object.
+> **WARNING!!!**  
+> To avoid WebAssembly memory leaks in the `BZ2` object call this
+> method when `BZ2.Compression` object is no longer needed.
 
 ## BZ2.Decompression class
 
@@ -224,11 +316,11 @@ JavaScript has no structures like the C does, so libbzip2 `bz_stream` structure 
 
 | libbzip2 field                | `BZ2.stream` property | Comment
 |-------------------------------|-----------------------|---------
-| `next_in`                     | `next_in`             |
-| `avail_in`                    | `avail_in`            |
+| `next_in`                     | `next_in`             | |
+| `avail_in`                    | `avail_in`            | |
 | `total_in_lo32`/`hi32`        | `total_in`            | read-only
-| `next_out`                    | `next_out`            |
-| `avail_out`                   | `avail_out`           |
+| `next_out`                    | `next_out`            | |
+| `avail_out`                   | `avail_out`           | |
 | `total_out_lo32`/`hi32`       | `total_out`           | read-only
 | `state`                       |                       | not exposed - internal libbzip2 field
 | `bzalloc`, `bzfree`, `opaque` |                       | not exposed - wasmbzip2 is always using standard allocator

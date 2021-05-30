@@ -1,27 +1,12 @@
 # wasmbzip2
 
-This **wasmbzip2** is a **[libbzip2](https://www.sourceware.org/bzip2/docs.html)** compiled into Web Assembly and wrapped by the JavaScript. 
-
-# Variants
-
-**wasmbzip2** have a few variants of the binaries.
-
-In most cases, you probably need the basic one: `libbzip2`.
-If you want just compression or decompression you can use a smaller binary `libbzip2-cmp` or `libbzip2-dec`. Variant `libbzip2-dbg` contains additional debug information.
-
-| Variant        | compression | decompression | debug |
-|----------------|-------------|---------------|-------|
-| `libbzip2`     | YES         | YES           | -     |
-| `libbzip2-cmp` | YES         | -             | -     |
-| `libbzip2-dec` | -           | YES           | -     |
-| `libbzip2-dbg` | YES         | YES           | YES   |
-
-**wasmbzip2** also provides `libbzip2-stdio` variant which is not well tested, because it is not very useful in a browser context. It exports libbzip2 API for `.bz2` file manipulation. See the `libbzip2-stdio.js` source code for more details.
+The **wasmbzip2** is a **[libbzip2](https://www.sourceware.org/bzip2/docs.html)**
+JavaScript wrapper library with binaries compiled to WebAssembly. 
 
 # High-level API
 
-The high-level API is created in JavaScript on top of the low-level API.
-It provides convenient way of compression and decompression.
+The high-level API is a JavaScript API created on top of a low-level API.
+It provides convenient way of compressing and decompressing bzip2 streams.
 
 >>>...TODO sample code
 
@@ -29,10 +14,14 @@ It provides convenient way of compression and decompression.
 
 ### Static methods
 
- * `async BZ2.create(memoryMax, wasi)` - create new instance of `BZ2` class that contains instance of `libbzip2` module.
-    * `memoryMax` - *optional*, maximum memory that Web Assembly module can allocate, unlimited by default
-    * `wasi` - *optional*, used only in `libbzip2-stdio` variant, provides WASI system calls.
-    * returns `Promise` that resolves to newly created object
+ * **`async BZ2.create(memoryMax, wasi)`**  
+   Creates new instance of `BZ2` class that contains instance of `libbzip2` WebAssembly module.
+    * **`memoryMax`** *optional*  
+      Maximum memory that WebAssembly module can allocate, unlimited by default.
+    * **`wasi`** *optional*  
+      A WASI system calls. It is used only in `libbzip2-stdio` variant.
+    * **Return value**  
+      A `Promise` that resolves to a `BZ2` object.
 
 ### Instance properties
 
@@ -102,7 +91,7 @@ It provides convenient way of compression and decompression.
         * `bytesRead` - number of bytes read from the `input`
         * `bytesWritten` - number of bytes written to the `output`
         * `finished` - `true` if all output data have been read
- * `allocInput()` - gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` method avoids unnecessary copying of the memory. If input buffer is full, zero-length array is returned. Returned array is valid until next operation on library instance.
+ * `getInput()` - gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` method avoids unnecessary copying of the memory. If input buffer is full, zero-length array is returned. Returned array is valid until next operation on library instance.
  * `readOutput()` - reads `Uint8Array` from internal output buffer. Returned array is located directly on the buffer, so no unnecessary memory copying is done by this method. If buffer is empty, `null` is returned. Returned array is valid until next operation on library instance.
  * `reset()` - reset state of the object allowing compression of another stream.
 
@@ -140,13 +129,13 @@ It provides convenient way of compression and decompression.
         * `bytesRead` - number of bytes read from the `input`
         * `bytesWritten` - number of bytes written to the `output`
         * `finished` - `true` if all output data have been read
- * `allocInput()` - gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` method avoids unnecessary copying of the memory. If input buffer is full, zero-length array is returned. Returned array is valid until next operation on library instance.
+ * `getInput()` - gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` method avoids unnecessary copying of the memory. If input buffer is full, zero-length array is returned. Returned array is valid until next operation on library instance.
  * `readOutput()` - reads `Uint8Array` from internal output buffer. Returned array is located directly on the buffer, so no unnecessary memory copying is done by this method. If buffer is empty, `null` is returned. Returned array is valid until next operation on library instance.
  * `reset()` - reset state of the object allowing decompression of another stream.
 
 # Low-level API
 
-The low-level API exposes libbzip2 API and adds some utility functions and classes. It it more advanced and requires basic knowledge of C and Web Assembly.
+The low-level API exposes libbzip2 API and adds some utility functions and classes. It it more advanced and requires basic knowledge of C and WebAssembly.
 
 Following sample shows how to use low-level API.
 >>> TODO: Run this sample
@@ -219,20 +208,19 @@ Below table shows the C symbols and how they are accessed from the **wasmbzip2**
 
 JavaScript has no structures like the C does, so libbzip2 `bz_stream` structure is wrapped by a `BZ2.stream` class.
 
-**Constructor**
+### Constructor
 
  * `new BZ2.stream(bz2)` - Create a new structure in the `bz2` instance memory. The memory is dynamically allocated, so it must be deallocated with the `dispose()` method.
 
-**Methods**
+### Instance methods
  * `dispose()` - Deallocate memory occupied by this structure. After the call, the structure is unusable.
    > **WARNING!** Call it when needed to avoid memory leaks in the `BZ2` instance object.
  * `clear()` - Fill the memory with zeros.
 
-**Properties**
+### Instance properties
  * `ptr` - This pointer to this structure. You have to provide this value to low-level API functions.
  * `view` - `DataView` of the wasm memory occupied by this structure
- * Other properties mapped to libbzip2 `bz_stream` structure are summarized in following table.
-
+ * Other properties mapped from `bz_stream` structure fields are summarized in following table.
 
 | libbzip2 field                | `BZ2.stream` property | Comment
 |-------------------------------|-----------------------|---------
@@ -244,6 +232,22 @@ JavaScript has no structures like the C does, so libbzip2 `bz_stream` structure 
 | `total_out_lo32`/`hi32`       | `total_out`           | read-only
 | `state`                       |                       | not exposed - internal libbzip2 field
 | `bzalloc`, `bzfree`, `opaque` |                       | not exposed - wasmbzip2 is always using standard allocator
+
+# Variants
+
+**wasmbzip2** have a few variants of the binaries.
+
+In most cases, you probably need the basic one: `libbzip2`.
+If you want just compression or decompression you can use a smaller binary `libbzip2-cmp` or `libbzip2-dec`. Variant `libbzip2-dbg` contains additional debug information.
+
+| Variant        | compression | decompression | debug |
+|----------------|-------------|---------------|-------|
+| `libbzip2`     | YES         | YES           | -     |
+| `libbzip2-cmp` | YES         | -             | -     |
+| `libbzip2-dec` | -           | YES           | -     |
+| `libbzip2-dbg` | YES         | YES           | YES   |
+
+**wasmbzip2** also provides `libbzip2-stdio` variant which is not well tested, because it is not very useful in a browser context. It exports libbzip2 API for `.bz2` file manipulation. See the `libbzip2-stdio.js` source code for more details.
 
 # Building
 

@@ -105,20 +105,9 @@ Decompress single array at once and writes to an output array.
  `BZ2.BufferError` if output does not fit into the output array.  
  `BZ2.Error` if libbzip2 error occurred.
 
-## BZ2.Compression class
+## BZ2.Processing class
 
-### Constructor
-
-**`new BZ2.Compression(bz2, inputBufferSize, outputBufferSize, level)`**
-
-* `bz2`  
-  A `BZ2` object that will handle the compression.
-* `inputBufferSize` *optional*  
-  A size of the internal input buffer, default is 128K.
-* `outputBufferSize` *optional*  
-  A size of the internal output buffer, default is 128K.
-* `level` *optional*  
-  A compression level from 1 to 9, default is 9.
+It is an abstract base class for `BZ2.Compression` and `BZ2.Decompression` classes.
 
 ### Instance properties
 
@@ -137,6 +126,49 @@ A number of bytes pending in the internal output buffer.
 **`finished`**  
 A boolean indicating that entire output stream was read.
 
+### Instance methods
+
+**`getInput()`**
+
+Gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` or `decompress()` method avoids unnecessary copying of the memory. This method will return the same array if called more than once without `compress()` or `decompress()` call. If the internal input buffer is full, zero-length array is returned. The returned array is valid until the next operation on the libbzip2 library instance. 
+
+
+**`readOutput()`**
+
+Reads `Uint8Array` from the internal output buffer. The returned array is located directly at the buffer, so no unnecessary memory copying is done by this method. The returned data is removed from the internal buffer. If the buffer is empty, `null` is returned. The returned array is valid until the next operation on the libbzip2 library instance. 
+
+
+**`reset()`**
+
+Resets the state of the object allowing compression or decompression of an another stream.
+
+
+**`dispose()`**
+
+Release WebAssembly memory occupied by this object.
+> **WARNING!!!**  
+> To avoid WebAssembly memory leaks in the `BZ2` object call this
+> method when `BZ2.Compression` or `BZ2.Decompression` object is no longer needed.
+
+## BZ2.Compression class
+
+### Inheritance
+
+This class extends `BZ2.Processing` class and inherits all its members.
+
+### Constructor
+
+**`new BZ2.Compression(bz2, inputBufferSize, outputBufferSize, level)`**
+
+* `bz2`  
+  A `BZ2` object that will handle the compression.
+* `inputBufferSize` *optional*  
+  A size of the internal input buffer, default is 128K.
+* `outputBufferSize` *optional*  
+  A size of the internal output buffer, default is 128K.
+* `level` *optional*  
+  A compression level from 1 to 9, default is 9.
+
 
 ### Instance methods
 
@@ -149,13 +181,13 @@ Compress part of data.
 * `inputOffset` *optional*  
   A start offset in `input` array, zero by default.
 * `inputLength` *optional*  
-  A length of a portion of the `input` array. Default is until the end of array.
+  A length of a portion of the `input` array. Default is until the end of the array.
 * `output` *optional*  
   A `Uint8Array` where the output will be written. By default, output will remain in the internal output buffer and can be read later with the `readOutput()` method.
 * `outputOffset` *optional, forbidden if `output` is missing*  
   A start offset in `output` array, zero by default.
 * `outputLength` *optional, forbidden if `output` is missing*  
-  A length of a portion of the `output` array. Default is until the end of array.
+  A length of a portion of the `output` array. Default is until the end of the array.
 * **Return value**  
   An object with following properties:
     * `bytesRead`  
@@ -165,27 +197,6 @@ Compress part of data.
     * `finished`  
       A boolean indicating that entire output stream was read.
 
-
-**`getInput()`**
-
-Gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` method avoids unnecessary copying of the memory. If input buffer is full, zero-length array is returned. Returned array is valid until next operation on library instance.
-
-
-**`readOutput()`**
-
-Reads `Uint8Array` from internal output buffer. Returned array is located directly on the buffer, so no unnecessary memory copying is done by this method. If buffer is empty, `null` is returned. Returned array is valid until next operation on library instance.
-
-**`reset()`**
-
-Reset state of the object allowing compression of another stream.
-
-
-**`dispose()`**
-
-Release WebAssembly memory occupied by this object.
-> **WARNING!!!**  
-> To avoid WebAssembly memory leaks in the `BZ2` object call this
-> method when `BZ2.Compression` object is no longer needed.
 
 ## BZ2.Decompression class
 

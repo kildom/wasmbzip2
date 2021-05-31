@@ -1,14 +1,14 @@
 
 let CC = '../wasi-sdk/bin/clang';
 let sysroot = '../wasi-sdk/share/wasi-sysroot';
-let cwd = '../build';
+let cwd = '../dist';
 let targets = {
     nostdio: 'libbzip2',
-    //nostdio_d: 'libbzip2-dbg',
-    //cmp: 'libbzip2-cmp',
-    //dec: 'libbzip2-dec',
-    //stdio: 'libbzip2-stdio',
-    //stdio_d: 'libbzip2-stdio-dbg',
+    nostdio_d: 'libbzip2-dbg',
+    cmp: 'libbzip2-cmp',
+    dec: 'libbzip2-dec',
+    stdio: 'libbzip2-stdio',
+    stdio_d: 'libbzip2-stdio-dbg',
 }
 let src = [
     '../bzip2/huffman.c',
@@ -31,11 +31,11 @@ let flags = [
     '-Wl,--import-memory',
 ];
 let flagsv = {
-    nostdio: ['-flto', '-O3', '-g0', '-DBZ_NO_STDIO'],
+    nostdio: ['-flto', '-Os', '-g0', '-DBZ_NO_STDIO'],
     nostdio_d: ['-O0', '-g', '-DBZ_NO_STDIO'],
-    cmp: ['-flto', '-O3', '-g0', '-DBZ_NO_STDIO', '-DNO_DECOMPRESS'],
-    dec: ['-flto', '-O3', '-g0', '-DBZ_NO_STDIO', '-DNO_COMPRESS'],
-    stdio: ['-flto', '-O3', '-g0'],
+    cmp: ['-flto', '-Os', '-g0', '-DBZ_NO_STDIO', '-DNO_DECOMPRESS'],
+    dec: ['-flto', '-Os', '-g0', '-DBZ_NO_STDIO', '-DNO_COMPRESS'],
+    stdio: ['-flto', '-Os', '-g0'],
     stdio_d: ['-O0', '-g'],
 }
 let includes = [
@@ -49,6 +49,40 @@ let template = '../src/libbzip2.tmpl.js';
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
+
+function preprocessJs(variant, src, dst, jsFlags)
+{
+    execFileSync(CC,
+        [
+            `--sysroot=${sysroot}`,
+            '-E', '-Wno-unused-command-line-argument',
+            ...flags,
+            ...flagsv[variant],
+            ...jsFlags,
+            ...includes,
+            '-o',
+            dst,
+            '-x', 'c',
+            src,
+        ],
+        {
+            cwd: cwd,
+            stdio: 'inherit',
+        });
+
+
+    let wasm = fs.readFileSync(`${targets[variant]}.wasm`);
+    js = fs.readFileSync(dst, 'utf-8')
+        .replace(/\r?\n/g, '\n')
+        .replace(/^\s*#.*?\r?\n/gm, '')
+        .replace(/--save-comment--([\S\s]*?)--end-of-comment--/g, (_, m) => `/*${Buffer.from(m, 'hex').toString('utf-8')}*/`)
+        .replace(/__BEGIN_INCLUDES__[\S\s]*__END_INCLUDES__/g, '')
+        .replace('__WASM_BASE64_GOES_HERE__', '`' + (wasm.toString('base64') + '`').replace(/(.{1,120})/g, '\n$1'))
+        .replace('__WASM_ARRAY_GOES_HERE__', JSON.stringify(Array.from(wasm)))
+        .replace('__WASM_BINSTR_GOES_HERE__', JSON.stringify(wasm.toString('binary')).replace(/\\u00/g, '\\x'))
+        .replace(/^\n+/gm, '');
+    fs.writeFileSync(dst, js);
+}
 
 function compile(variant) {
 
@@ -75,34 +109,10 @@ function compile(variant) {
         .replace(/\/\*([\S\s]*?)\*\//g, (_, m) => `--save-comment--${Buffer.from(m).toString('hex')}--end-of-comment--`);
     fs.writeFileSync(`${targets[variant]}.tmp`, js);
 
-    execFileSync(CC,
-        [
-            `--sysroot=${sysroot}`,
-            '-E', '-Wno-unused-command-line-argument',
-            ...flags,
-            ...flagsv[variant],
-            ...includes,
-            '-o',
-            `${targets[variant]}.js`,
-            '-x', 'c',
-            `${targets[variant]}.tmp`,
-        ],
-        {
-            cwd: cwd,
-            stdio: 'inherit',
-        });
+    preprocessJs(variant, `${targets[variant]}.tmp`, `${targets[variant]}.js`, []);
+    preprocessJs(variant, `${targets[variant]}.tmp`, `${targets[variant]}-emb.js`, ['-DEMBED_WASM']);
 
     fs.unlinkSync(`${targets[variant]}.tmp`);
-
-    let wasm = fs.readFileSync(`${targets[variant]}.wasm`);
-    js = fs.readFileSync(`${targets[variant]}.js`, 'utf-8')
-        .replace(/^\s*#.*?\r?\n/gm, '')
-        .replace(/--save-comment--([\S\s]*?)--end-of-comment--/g, (_, m) => `/*${Buffer.from(m, 'hex').toString('utf-8')}*/`)
-        .replace(/__BEGIN_INCLUDES__[\S\s]*__END_INCLUDES__/g, '')
-        .replace('__WASM_BASE64_GOES_HERE__', JSON.stringify(wasm.toString('base64')))
-        .replace('__WASM_ARRAY_GOES_HERE__', JSON.stringify(Array.from(wasm)))
-        .replace('__WASM_BINSTR_GOES_HERE__', JSON.stringify(wasm.toString('binary')).replace(/\\u00/g, '\\x'));
-    fs.writeFileSync(`${targets[variant]}.js`, js);
 }
 
 CC = path.join(__dirname, CC);

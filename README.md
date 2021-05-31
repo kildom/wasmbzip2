@@ -6,7 +6,7 @@ JavaScript wrapper library with binaries compiled to WebAssembly.
 # High-level API
 
 The high-level API is a JavaScript API created on top of a low-level API.
-It provides convenient way of compressing and decompressing bzip2 streams.
+It provides convenient way of compressing and decompressing bzip2 data.
 
 >>>...TODO sample code
 
@@ -14,6 +14,15 @@ It provides convenient way of compressing and decompressing bzip2 streams.
 
 ### Static methods
 
+**`setBinary(binary)`**
+
+Sets the WebAssembly binary. The method does not exists in variants with embedded binary.
+It must be called before `BZ2.create()`.
+
+* **``binary``**  
+   WebAssembly binary that is associated with current variant of wasmbzpi2.
+   The binary can be in any form that `WebAssembly.compile()` or `WebAssembly.compileStreaming()`
+   accepts.
 
 **`async create(memoryMax, wasi)`**
 
@@ -361,14 +370,21 @@ JavaScript has no structures like the C does, so libbzip2 `bz_stream` structure 
 **wasmbzip2** have a few variants of the binaries.
 
 In most cases, you probably need the basic one: `libbzip2`.
-If you want just compression or decompression you can use a smaller binary `libbzip2-cmp` or `libbzip2-dec`. Variant `libbzip2-dbg` contains additional debug information.
+If you want just compression or decompression you can use a smaller binary `libbzip2-cmp` or `libbzip2-dec`.
+Variant `libbzip2-dbg` contains additional debug information.
+Variants with `-emb` suffix contains WebAssembly binary embedded in the source file,
+so they do not need for `BZ2.setBinary()` call.
 
-| Variant        | compression | decompression | debug |
-|----------------|-------------|---------------|-------|
-| `libbzip2`     | YES         | YES           | -     |
-| `libbzip2-cmp` | YES         | -             | -     |
-| `libbzip2-dec` | -           | YES           | -     |
-| `libbzip2-dbg` | YES         | YES           | YES   |
+| Variant            | compression | decompression | debug | embedded binary |
+|--------------------|-------------|---------------|-------|-----------------|
+| `libbzip2`         | YES         | YES           | -     | -               |
+| `libbzip2-emb`     | YES         | YES           | -     | YES             |
+| `libbzip2-cmp`     | YES         | -             | -     | -               |
+| `libbzip2-cmp-emb` | YES         | -             | -     | YES             |
+| `libbzip2-dec`     | -           | YES           | -     | -               |
+| `libbzip2-dec-emb` | -           | YES           | -     | YES             |
+| `libbzip2-dbg`     | YES         | YES           | YES   | -               |
+| `libbzip2-dbg-emb` | YES         | YES           | YES   | YES             |
 
 **wasmbzip2** also provides `libbzip2-stdio` variant which is not well tested, because it is not very useful in a browser context. It exports libbzip2 API for `.bz2` file manipulation. See the `libbzip2-stdio.js` source code for more details.
 

@@ -1,5 +1,5 @@
 
-const { BZ2 } = require('./build/libbzip2-dbg');
+const { BZ2 } = require('./dist/libbzip2-dbg');
 
 async function runit() {
 
@@ -7,6 +7,7 @@ async function runit() {
 
 		const encoder = new TextEncoder();
 
+		BZ2.setBinary(require('fs').readFileSync('./dist/libbzip2-dbg.wasm'));
 		let bz2 = await BZ2.create();
 
 		console.log(bz2.version);

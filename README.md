@@ -1,3 +1,9 @@
+> # WORK IN PROGRESS
+>
+> This project has a ready code, but it needs more testing, bugfixes and general improvements.
+>
+> **It is not production ready yet.**
+
 # wasmbzip2
 
 The **wasmbzip2** is a **[libbzip2](https://www.sourceware.org/bzip2/docs.html)**
@@ -126,18 +132,6 @@ A total number of consumed bytes.
 **`totalOutput`**  
 A total number of produced bytes.
 
-**`pendingInput`**  
-A number of bytes pending in the internal input buffer.
-
-**`freeInput`**  
-A number of bytes unused in the internal input buffer.
-
-**`pendingOutput`**  
-A number of bytes pending in the internal output buffer.
-
-**`freeOutput`**  
-A number of bytes unused in the internal output buffer.
-
 **`finished`**  
 A boolean indicating that entire output stream was read.
 
@@ -147,16 +141,9 @@ A boolean indicating that entire output stream was read.
 
 Gets `Uint8Array` that is located at the internal input buffer. Providing it to `compress()` or `decompress()` method avoids unnecessary copying of the memory. This method will return the same array if called more than once without `compress()` or `decompress()` call. If the internal input buffer is full, zero-length array is returned. The returned array is valid until the next operation on the libbzip2 library instance. 
 
-
-**`readOutput()`**
-
-Reads `Uint8Array` from the internal output buffer. The returned array is located directly at the buffer, so no unnecessary memory copying is done by this method. The returned data is removed from the internal buffer. If the buffer is empty, `null` is returned. The returned array is valid until the next operation on the libbzip2 library instance. 
-
-
 **`reset()`**
 
 Resets the state of the object allowing compression or decompression of an another stream.
-
 
 **`dispose()`**
 
@@ -198,7 +185,7 @@ Compress part of a data.
 * `inputLength` *optional*  
   A length of a portion of the `input` array. Default is until the end of the array.
 * `output` *optional*  
-  A `Uint8Array` where the output will be written. By default, output will remain in the internal output buffer and can be read later with the `readOutput()` method.
+  A `Uint8Array` where the output will be written. By default, output will in the return value.
 * `outputOffset` *optional, forbidden if `output` is missing*  
   A start offset in `output` array, zero by default.
 * `outputLength` *optional, forbidden if `output` is missing*  
@@ -211,6 +198,8 @@ Compress part of a data.
       A number of bytes written to the `output`.
     * `finished`  
       A boolean indicating that entire output stream was read.
+    * `output` *optional*  
+      A `Uint8Array` with the output data. It exists only if `output` parameter was not provided.
 
 
 ## BZ2.Decompression class
@@ -239,13 +228,14 @@ This class extends `BZ2.Processing` class and inherits all its members.
 Decompress part of a data.
 
 * `input`  
-  A `Uint8Array` with the input bytes. A `null` should be passed at the end to indicate end of data.
+  A `Uint8Array` with the input bytes. A `null` can be passed at the end to indicate end of data. Passing `null`
+  is optional, but it allows detecting unexpected end of compressed data.
 * `inputOffset` *optional*  
   A start offset in `input` array, zero by default.
 * `inputLength` *optional*  
   A length of a portion of the `input` array. Default is until the end of the array.
 * `output` *optional*  
-  A `Uint8Array` where the output will be written. By default, output will remain in the internal output buffer and can be read later with the `readOutput()` method.
+  A `Uint8Array` where the output will be written. By default, output will in the return value.
 * `outputOffset` *optional, forbidden if `output` is missing*  
   A start offset in `output` array, zero by default.
 * `outputLength` *optional, forbidden if `output` is missing*  
@@ -258,18 +248,8 @@ Decompress part of a data.
       A number of bytes written to the `output`.
     * `finished`  
       A boolean indicating that entire output stream was read.
-
-* `input` - `Uint8Array` with input bytes. `null` can be provided at the to indicate end of data. Indicating and of data is not necessary, but it will help detection of unexpected end of input.
-* `inputOffset` - *optional*, start offset in `input` array, zero by default
-* `inputLength` - *optional*, length of input data
-* `output` - *optional*, `Uint8Array` where the output will be written. By default output will remain in the internal output buffer and can be read with the `readOutput()` method.
-* `inputOffset` - *optional*, *forbidden if `output` is missing*, start offset in `output` array, zero by default
-* `inputLength` - *optional*, *forbidden if `output` is missing*, maximum length of output
-* returns object:
-    * `bytesRead` - number of bytes read from the `input`
-    * `bytesWritten` - number of bytes written to the `output`
-    * `finished` - `true` if all output data have been read
-
+    * `output` *optional*  
+      A `Uint8Array` with the output data. It exists only if `output` parameter was not provided.
 
 # Low-level API
 

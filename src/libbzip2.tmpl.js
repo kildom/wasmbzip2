@@ -224,6 +224,10 @@ BZ2.Processing = class {
         return this.stream.total_out;
     }
 
+    get finished() {
+        return this.state == BZ2._FINISHED;
+    }
+
     getInput() {
         if (this.state != BZ2._RUNNING)
             throw Error('wasmbzip2: Invalid state');
@@ -245,6 +249,10 @@ BZ2.Processing = class {
             inputLength = params[i++];
         } else {
             inputLength = input ? input.length - inputOffset : 0;
+        }
+        if (input) {
+            inputOffset =+ input.byteOffset;
+            input = input.buffer;
         }
         output = params[i++];
         if (typeof (params[i]) == 'number') {
@@ -305,9 +313,9 @@ BZ2.Processing = class {
             && (output || this.stream.avail_out > 0)) {
 
             if (inputLength > 0
-                && input.buffer == this.memory.buffer
-                && input.byteOffset == this.inputBufBegin
-                && input.length <= this.inputBufSize) {
+                && input == this.memory.buffer
+                && inputOffset == this.inputBufBegin
+                && inputLength <= this.inputBufSize) {
                 this.stream.next_in = this.inputBufBegin;
                 this.stream.avail_in = inputLength;
                 inputOffset += inputLength;
@@ -329,9 +337,9 @@ BZ2.Processing = class {
 
             let code;
             if (this.compression) {
-                code = this.bzCompress(this.stream.ptr, this.state == BZ2._FINISHING ? BZ2.FINISH : BZ2.RUN);
+                code = this.bz2.bzCompress(this.stream.ptr, this.state == BZ2._FINISHING ? BZ2.FINISH : BZ2.RUN);
             } else {
-                code = this.bzDecompress(this.stream.ptr);
+                code = this.bz2.bzDecompress(this.stream.ptr);
             }
             BZ2._checkErrorCode(code, true);
 
@@ -357,7 +365,7 @@ BZ2.Processing = class {
 
         if (!output) {
             ret.bytesRead = this.stream.next_out - this.outputBufBegin;
-            ret.output = new Uint8Array(this.memory.buffer, this.outputBufBegin, res.bytesRead);
+            ret.output = new Uint8Array(this.memory.buffer, this.outputBufBegin, ret.bytesRead);
         } else {
             ret.bytesRead = outputOffset - initialOutputOffset;
         }

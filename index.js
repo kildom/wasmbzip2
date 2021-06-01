@@ -1,5 +1,8 @@
 
 const { BZ2 } = require('./dist/libbzip2-dbg');
+BZ2.setBinary(require('fs').readFileSync('./dist/libbzip2-dbg.wasm'));
+const encoder = new TextEncoder();
+
 
 async function runit() {
 
@@ -93,7 +96,7 @@ async function runit() {
 		console.log('---', bz2.memory.buffer.byteLength);
 
 	} finally {
-		setTimeout(()=>{}, 5000);
+		setTimeout(() => { }, 5000);
 	}
 
 	/*
@@ -114,4 +117,26 @@ async function runit() {
 	//	}
 }
 
-runit();
+async function compressTest() {
+	let bz2 = await BZ2.create();
+	let stream = new BZ2.Compress(bz2, 100, 100, 1);
+	let input = encoder.encode('bzip2 compresses files using the Burrows-Wheeler block-sorting text compression algorithm, and Huffman coding. Compression is generally considerably better than that achieved by more conventional LZ77/LZ78-based compressors, and approaches the performance of the PPM family of statistical compressors. bzip2 is built on top of libbzip2, a flexible library for handling compressed data in the bzip2 format. This manual describes both how to use the program and how to work with the library interface. Most of the manual is devoted to this library, not the program, which is good news if your interest is only in the program.');
+	let offset = 0;
+	let len = input.length;
+	do {
+		if (len == 0) {
+			input = null;
+		}
+		let { bytesRead, bytesWritten, finished } = stream.compress(input, offset, len);
+		console.log(bytesRead, bytesWritten, finished);
+		if (finished) break;
+		offset += bytesWritten;
+		len -= bytesWritten;
+	} while (true);
+	stream.dispose();
+}
+
+//runit();
+compressTest();
+
+setTimeout(() => { }, 5000);

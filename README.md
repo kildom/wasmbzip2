@@ -129,8 +129,14 @@ A total number of produced bytes.
 **`pendingInput`**  
 A number of bytes pending in the internal input buffer.
 
+**`freeInput`**  
+A number of bytes unused in the internal input buffer.
+
 **`pendingOutput`**  
 A number of bytes pending in the internal output buffer.
+
+**`freeOutput`**  
+A number of bytes unused in the internal output buffer.
 
 **`finished`**  
 A boolean indicating that entire output stream was read.

@@ -1,5 +1,6 @@
 
 let CC = '../wasi-sdk/bin/clang';
+let WASM_OPT = '../binaryen/bin/wasm-opt';
 let sysroot = '../wasi-sdk/share/wasi-sysroot';
 let cwd = '../dist';
 let targets = {
@@ -31,11 +32,11 @@ let flags = [
     '-Wl,--import-memory',
 ];
 let flagsv = {
-    nostdio: ['-flto', '-Os', '-g0', '-DBZ_NO_STDIO'],
+    nostdio: ['-flto', '-Oz', '-g0', '-DBZ_NO_STDIO'],
     nostdio_d: ['-O0', '-g', '-DBZ_NO_STDIO'],
-    cmp: ['-flto', '-Os', '-g0', '-DBZ_NO_STDIO', '-DNO_DECOMPRESS'],
-    dec: ['-flto', '-Os', '-g0', '-DBZ_NO_STDIO', '-DNO_COMPRESS'],
-    stdio: ['-flto', '-Os', '-g0'],
+    cmp: ['-flto', '-Oz', '-g0', '-DBZ_NO_STDIO', '-DNO_DECOMPRESS'],
+    dec: ['-flto', '-Oz', '-g0', '-DBZ_NO_STDIO', '-DNO_COMPRESS'],
+    stdio: ['-flto', '-Oz', '-g0'],
     stdio_d: ['-O0', '-g'],
 }
 let includes = [
@@ -50,8 +51,7 @@ const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 
-function preprocessJs(variant, src, dst, jsFlags)
-{
+function preprocessJs(variant, src, dst, jsFlags) {
     execFileSync(CC,
         [
             `--sysroot=${sysroot}`,
@@ -88,6 +88,8 @@ function compile(variant) {
 
     console.log(`Compiling ${targets[variant]}...`);
 
+    let wasmOpt = ([...flags, ...flagsv[variant]].indexOf('-O0') < 0);
+
     execFileSync(CC,
         [
             `--sysroot=${sysroot}`,
@@ -95,7 +97,7 @@ function compile(variant) {
             ...flagsv[variant],
             ...includes,
             '-o',
-            `${targets[variant]}.wasm`,
+            wasmOpt ? `${targets[variant]}-no-opt.wasm` : `${targets[variant]}.wasm`,
             ...src,
             ...srcv[variant],
         ],
@@ -103,6 +105,21 @@ function compile(variant) {
             cwd: cwd,
             stdio: 'inherit',
         });
+
+    if (wasmOpt) {
+        execFileSync(WASM_OPT,
+            [
+                `-Oz`,
+                '-o',
+                `${targets[variant]}.wasm`,
+                `${targets[variant]}-no-opt.wasm`,
+            ],
+            {
+                cwd: cwd,
+                stdio: 'inherit',
+            });
+        fs.unlinkSync(`${targets[variant]}-no-opt.wasm`);
+    }
 
     let js = fs.readFileSync(template, 'utf-8')
         .replace(/^\s*\/\/#/gm, '#')
@@ -116,6 +133,7 @@ function compile(variant) {
 }
 
 CC = path.join(__dirname, CC);
+WASM_OPT = path.join(__dirname, WASM_OPT);
 sysroot = path.join(__dirname, sysroot);
 cwd = path.join(__dirname, cwd);
 template = path.join(__dirname, template);
